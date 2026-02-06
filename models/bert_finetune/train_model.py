@@ -7,12 +7,13 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification, Trai
 import os
 
 def label_sentiment(stars):
-    if stars <= 2:
-        return 0  # Négatif
-    elif stars == 3:
-        return 1  # Neutre
-    else:
-        return 2  # Positif
+    # Map 1-5 stars to -2 to 2 scale
+    # 1: -2 (Very Negative)
+    # 2: -1 (Negative)
+    # 3:  0 (Neutral)
+    # 4:  1 (Positive)
+    # 5:  2 (Very Positive)
+    return float(stars - 3)
 
 class YelpDataset(Dataset):
     def __init__(self, encodings, labels):
@@ -21,7 +22,8 @@ class YelpDataset(Dataset):
 
     def __getitem__(self, idx):
         item = {key: torch.tensor(val[idx]) for key, val in self.encodings.items()}
-        item['labels'] = torch.tensor(self.labels[idx])
+        # For regression, labels must be floats
+        item['labels'] = torch.tensor(self.labels[idx], dtype=torch.float)
         return item
 
     def __len__(self):
@@ -29,14 +31,29 @@ class YelpDataset(Dataset):
 
 def compute_metrics(pred):
     labels = pred.label_ids
-    preds = pred.predictions.argmax(-1)
-    precision, recall, f1, _ = precision_recall_fscore_support(labels, preds, average='weighted')
-    acc = accuracy_score(labels, preds)
+    preds = pred.predictions.flatten() # For regression, shape is (batch, 1) or (batch,)
+    
+    # MSE for regression quality
+    mse = ((preds - labels) ** 2).mean()
+    
+    # Accuracy based on polarity (Sign of the values)
+    # Neutral (0) is treated separately or as its own category if 0
+    # Polarity accuracy: same sign
+    # We can discretize both to -1, 0, 1 for polarity accuracy
+    def get_polarity(val):
+        if val < -0.5: return -1
+        if val > 0.5: return 1
+        return 0
+    
+    # vectorized version
+    polar_labels = [1 if l > 0.5 else (-1 if l < -0.5 else 0) for l in labels]
+    polar_preds = [1 if p > 0.5 else (-1 if p < -0.5 else 0) for p in preds]
+    
+    acc = accuracy_score(polar_labels, polar_preds)
+    
     return {
+        'mse': mse.item(),
         'accuracy': acc,
-        'f1': f1,
-        'precision': precision,
-        'recall': recall
     }
 
 def train():
@@ -68,7 +85,8 @@ def train():
     train_dataset = YelpDataset(train_encodings, train_labels)
     val_dataset = YelpDataset(val_encodings, val_labels)
 
-    model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=3)
+    # For regression, num_labels=1
+    model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=1)
 
     # Détection et configuration du device (GPU si disponible)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -94,6 +112,8 @@ def train():
         evaluation_strategy="epoch",
         save_strategy="epoch",
         load_best_model_at_end=True,
+        metric_for_best_model="mse",
+        greater_is_better=False,
     )
 
     # 4. Entraînement

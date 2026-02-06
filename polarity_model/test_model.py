@@ -13,7 +13,7 @@ def label_sentiment(stars):
         return 2  # Positif
 
 def test():
-    model_path = "c:/Travail/S6C01/polarity_model/model"
+    model_path = "./polarity_model/model"
     
     if not os.path.exists(model_path):
         print(f"Erreur: Le modèle n'a pas été trouvé dans {model_path}. Veuillez d'abord exécuter train_model.py.")
@@ -44,7 +44,7 @@ def test():
         print(f"Prédiction: {friendly_label} (Score: {result['score']:.4f})\n")
 
     # 2. Évaluation sur un échantillon de données test
-    data_path = "c:/Travail/S6C01/data/csv/yelp_academic_reviews4students.csv"
+    data_path = "./data/csv/yelp_academic_reviews4students.csv"
     print(f"Évaluation sur un échantillon de données de {data_path}...")
     
     # On saute les 5000 premières lignes utilisées pour l'entraînement

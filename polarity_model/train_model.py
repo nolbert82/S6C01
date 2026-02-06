@@ -41,7 +41,7 @@ def compute_metrics(pred):
 
 def train():
     # 1. Charger les données
-    data_path = "c:/Travail/S6C01/data/csv/yelp_academic_reviews4students.csv"
+    data_path = "./data/csv/yelp_academic_reviews4students.csv"
     print(f"Chargement des données depuis {data_path}...")
     
     # Utilisation d'un sous-ensemble pour la démonstration (ajuster nrows au besoin)
@@ -70,8 +70,16 @@ def train():
 
     model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=3)
 
+    # Détection et configuration du device (GPU si disponible)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Device utilisé : {device}")
+    if device.type == "cuda":
+        print(f"Nom du GPU : {torch.cuda.get_device_name(0)}")
+    
+    model.to(device)
+
     # 3. Paramètres d'entraînement
-    output_dir = "c:/Travail/S6C01/polarity_model/model"
+    output_dir = "./polarity_model/model/checkpoints"
     os.makedirs(output_dir, exist_ok=True)
 
     training_args = TrainingArguments(
@@ -101,9 +109,10 @@ def train():
     trainer.train()
 
     # 5. Sauvegarder le modèle final
-    trainer.save_model(output_dir)
-    tokenizer.save_pretrained(output_dir)
-    print(f"Modèle et tokenizer sauvegardés dans {output_dir}")
+    final_model_dir = "./polarity_model/model"
+    trainer.save_model(final_model_dir)
+    tokenizer.save_pretrained(final_model_dir)
+    print(f"Modèle et tokenizer sauvegardés dans {final_model_dir}")
 
 if __name__ == "__main__":
     train()

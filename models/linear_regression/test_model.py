@@ -34,26 +34,16 @@ def prepare_features(df, vectorizer, scaler):
     print("Preparing features...")
     
     # 1. Target
-    if 'stars_review' in df.columns:
-        y = df['stars_review']
-    elif 'stars' in df.columns:
-        y = df['stars']
-    else:
-        y = None
+    y = df['stars_review'] if 'stars_review' in df.columns else None
 
     # 2. Text Features
     # MUST MATCH train_model logic exactly
-    text_cols = []
-    candidates = [
+    text_cols = [
         'text', 
-        'name_business', 'address', 'city', 'state', 'categories', 
-        'name_user', 'name', 
-        'attributes', 'hours'
+        'name', 'address', 'city', 'state', 'categories', 'attributes', 'hours',
+        'name_user'
     ]
-    for col in candidates:
-        if col in df.columns:
-            text_cols.append(col)
-            
+    
     print(f"Combining text from columns: {text_cols}")
     text_data = df[text_cols].astype(str).fillna('').agg(' '.join, axis=1)
     
@@ -61,21 +51,14 @@ def prepare_features(df, vectorizer, scaler):
     X_text = vectorizer.transform(text_data)
         
     # 3. Numeric Features
-    num_candidates = [
-        'useful_review', 'funny_review', 'cool_review',
-        'stars_business', 'review_count_business', 'latitude', 'longitude', 'is_open',
+    numeric_cols = [
+        'useful', 'funny', 'cool',
+        'stars_business', 'review_count', 'latitude', 'longitude', 'is_open',
         'average_stars', 'review_count_user', 'useful_user', 'funny_user', 'cool_user', 'fans'
     ]
     
-    valid_num_cols = [c for c in num_candidates if c in df.columns]
-    
-    if 'useful' in df.columns and 'useful_review' not in df.columns:
-        valid_num_cols.append('useful')
-    if 'funny' in df.columns and 'funny_review' not in df.columns:
-        valid_num_cols.append('funny')
-    
-    print(f"Using numeric features: {valid_num_cols}")
-    df_num = df[valid_num_cols].fillna(0)
+    print(f"Using numeric features: {numeric_cols}")
+    df_num = df[numeric_cols].fillna(0)
     
     print("Transforming numeric features...")
     X_num = scaler.transform(df_num)

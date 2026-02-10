@@ -1,9 +1,11 @@
 import pandas as pd
 import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.svm import LinearSVC
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader, TensorDataset
+from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, classification_report
 import pickle
 import os
 import sys
@@ -13,22 +15,86 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, "..", "..", "data", "csv"))
 MODEL_DIR = os.path.join(SCRIPT_DIR, "saved_model")
 
-# Using more features since TF-IDF is more informative and SVM handles high-dim well
-MAX_FEATURES = 10000 
+MAX_FEATURES = 5000 
+BATCH_SIZE = 128
+EPOCHS = 10
+LEARNING_RATE = 0.001
+
+class BM25Transformer:
+    def __init__(self, k1=1.5, b=0.75):
+        self.k1 = k1
+        self.b = b
+        self.vectorizer = CountVectorizer(max_features=MAX_FEATURES, stop_words='english')
+        self.idf = None
+        self.avgdl = None
+
+    def fit(self, texts):
+        print("Fitting CountVectorizer...")
+        tf = self.vectorizer.fit_transform(texts)
+        
+        # Calculate doc lengths
+        doc_lengths = tf.sum(axis=1).A1
+        self.avgdl = np.mean(doc_lengths)
+        
+        # Calculate IDF
+        N = tf.shape[0]
+        # Number of docs containing term t
+        df = np.diff(tf.tocsc().indptr)
+        self.idf = np.log((N - df + 0.5) / (df + 0.5) + 1)
+        
+        return self
+
+    def transform(self, texts):
+        tf = self.vectorizer.transform(texts)
+        doc_lengths = tf.sum(axis=1).A1
+        
+        # We process in chunks to avoid memory issues if needed, 
+        # but for MAX_FEATURES=5000 it should fit.
+        tf = tf.tocoo()
+        
+        # formula: idf * (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * (dl / avgdl)))
+        # This is easier to compute on the sparse data directly
+        data = tf.data
+        rows = tf.row
+        cols = tf.col
+        
+        # BM25 components
+        dl_term = self.k1 * (1 - self.b + self.b * (doc_lengths[rows] / self.avgdl))
+        new_data = self.idf[cols] * (data * (self.k1 + 1)) / (data + dl_term)
+        
+        from scipy.sparse import csr_matrix
+        return csr_matrix((new_data, (rows, cols)), shape=tf.shape)
+
+class MLP(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super(MLP, self).__init__()
+        self.layers = nn.Sequential(
+            nn.Linear(input_dim, 512),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(512, 128),
+            nn.BatchNorm1d(128),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(128, output_dim)
+        )
+        
+    def forward(self, x):
+        return self.layers(x)
 
 def load_and_join_data():
-    print("Loading datasets for TF-IDF + SVM model...")
+    print("Loading datasets for BM25 + MLP model...")
     business_path = os.path.join(DATA_DIR, "yelp_academic_dataset_business.csv")
     review_path = os.path.join(DATA_DIR, "yelp_academic_reviews4students.csv")
     user_path = os.path.join(DATA_DIR, "yelp_academic_dataset_user4students.csv")
 
     try:
         df_business = pd.read_csv(business_path)
-        # We can handle more data with LinearSVC as it's efficient, but let's keep it reasonable
         df_reviews = pd.read_csv(review_path)
-        if len(df_reviews) > 150000:
-            print("Sampling 150k reviews for training...")
-            df_reviews = df_reviews.sample(n=150000, random_state=42)
+        if len(df_reviews) > 100000:
+            print("Sampling 100k reviews for training...")
+            df_reviews = df_reviews.sample(n=100000, random_state=42)
         df_users = pd.read_csv(user_path)
     except FileNotFoundError as e:
         print(f"Error: Could not find data files. {e}")
@@ -43,8 +109,6 @@ def load_and_join_data():
     return df_merged
 
 def preprocess_data(df):
-    print("Preprocessing text...")
-    # Clean and combine text fields
     text_cols = ['text', 'name', 'categories', 'name_user', 'city', 'state']
     for col in text_cols:
         df[col] = df[col].astype(str).replace('nan', '')
@@ -53,51 +117,70 @@ def preprocess_data(df):
                      df['categories'] + " " + df['name_user'] + " " +
                      df['city'] + " " + df['state'])
     
-    y = df['stars'].values.astype(int)
+    y = df['stars'].values.astype(int) - 1
+    y = np.clip(y, 0, 4)
     return combined_text, y
 
 def train():
-    # Note: Scikit-learn LinearSVC runs on CPU. It is extremely fast for sparse TF-IDF data.
-    print("Algorithm: Linear SVM with TF-IDF")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
 
     # 1. Load data
     df = load_and_join_data()
-    
-    # 2. Preprocess
     text_data, y = preprocess_data(df)
     
-    # 3. Train/Test split
-    X_train_text, X_val_text, y_train, y_val = train_test_split(text_data, y, test_size=0.2, random_state=42)
+    # 2. BM25 Vectorization
+    print("Applying BM25 transformation...")
+    bm25 = BM25Transformer().fit(text_data)
+    X_bm25 = bm25.transform(text_data).toarray()
     
-    # 4. TF-IDF Vectorization
-    print(f"Vectorizing text (TF-IDF, {MAX_FEATURES} features)...")
-    vectorizer = TfidfVectorizer(max_features=MAX_FEATURES, stop_words='english', ngram_range=(1, 2))
-    X_train = vectorizer.fit_transform(X_train_text)
-    X_val = vectorizer.transform(X_val_text)
+    # 3. Split
+    X_train, X_val, y_train, y_val = train_test_split(X_bm25, y, test_size=0.15, random_state=42)
     
-    # 5. Model initialization & Training
-    print("Training LinearSVC...")
-    # LinearSVC is generally better than SVC for text (linearly separable in high-dim)
-    model = LinearSVC(C=1.0, max_iter=1000, dual='auto')
-    model.fit(X_train, y_train)
+    # 4. PyTorch setup
+    train_loader = DataLoader(TensorDataset(torch.FloatTensor(X_train), torch.LongTensor(y_train)), 
+                              batch_size=BATCH_SIZE, shuffle=True)
+    val_loader = DataLoader(TensorDataset(torch.FloatTensor(X_val), torch.LongTensor(y_val)), 
+                            batch_size=BATCH_SIZE)
     
-    # 6. Evaluation
-    print("Evaluating...")
-    y_pred = model.predict(X_val)
-    accuracy = accuracy_score(y_val, y_pred)
-    print(f"Validation Accuracy: {accuracy*100:.2f}%")
-    print("\nClassification Report:")
-    print(classification_report(y_val, y_pred))
+    model = MLP(MAX_FEATURES, 5).to(device)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    
+    # 5. Training
+    print("Starting MLP training...")
+    for epoch in range(EPOCHS):
+        model.train()
+        total_loss = 0
+        for inputs, targets in train_loader:
+            inputs, targets = inputs.to(device), targets.to(device)
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            loss = criterion(outputs, targets)
+            loss.backward()
+            optimizer.step()
+            total_loss += loss.item()
+            
+        # Validation
+        model.eval()
+        correct = 0
+        with torch.no_grad():
+            for inputs, targets in val_loader:
+                inputs, targets = inputs.to(device), targets.to(device)
+                outputs = model(inputs)
+                _, predicted = torch.max(outputs, 1)
+                correct += (predicted == targets).sum().item()
+        
+        print(f"Epoch {epoch+1}/{EPOCHS}, Loss: {total_loss/len(train_loader):.4f}, Val Acc: {100*correct/len(y_val):.2f}%")
 
-    # 7. Save model and vectorizer
+    # 6. Save
     print(f"Saving artifacts to {MODEL_DIR}...")
     if not os.path.exists(MODEL_DIR):
         os.makedirs(MODEL_DIR)
         
-    with open(os.path.join(MODEL_DIR, "model.pkl"), "wb") as f:
-        pickle.dump(model, f)
-    with open(os.path.join(MODEL_DIR, "vectorizer.pkl"), "wb") as f:
-        pickle.dump(vectorizer, f)
+    torch.save(model.state_dict(), os.path.join(MODEL_DIR, "model.pth"))
+    with open(os.path.join(MODEL_DIR, "bm25_transformer.pkl"), "wb") as f:
+        pickle.dump(bm25, f)
     
     print("Training complete.")
 

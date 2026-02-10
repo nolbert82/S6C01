@@ -135,7 +135,7 @@ def train():
     X_bm25 = bm25.transform(text_data).toarray()
     
     # 3. Split
-    X_train, X_val, y_train, y_val = train_test_split(X_bm25, y, test_size=0.15, random_state=42)
+    X_train, X_val, y_train, y_val = train_test_split(X_bm25, y, test_size=0.15)
     
     # 4. PyTorch setup
     train_loader = DataLoader(TensorDataset(torch.FloatTensor(X_train), torch.LongTensor(y_train)), 

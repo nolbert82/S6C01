@@ -15,7 +15,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, "..", "..", "data", "csv"))
 MODEL_DIR = os.path.join(SCRIPT_DIR, "saved_model")
 
-MAX_FEATURES = 5000  # Limited to avoid memory issues with BoW
+MAX_FEATURES = 2500  # Limited to avoid memory issues with BoW
 BATCH_SIZE = 64
 EPOCHS = 5
 LEARNING_RATE = 0.001

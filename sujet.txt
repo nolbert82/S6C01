@@ -104,3 +104,129 @@ Rendus :
 - Code Python
 - Dépôt Git
 Démonstration / Evaluation du travail
+
+
+Grille de notation :
+Préparartion des données	
+Non réalisé
+0 points
+	
+Réalisé
+1 points
+Utilisation fonctions inutiles	
+Utilisation
+-1 points
+	
+non pénalisé
+0 points
+Sélection variables	
+pas de sélection
+0 points
+	
+Sélection
+1 points
+Copie/coller naif de fonctions	
+Copie coller de fonctions qui n'ont rien avoir avec le projet
+-2 points
+	
+Non pénalisé
+0 points
+Repr- Ngrammes	
+pas utilisée
+0 points
+	
+réalisée
+1 points
+Repré. tf/idf	
+Non réalisée
+0 points
+	
+Réalisée
+1 points
+LLM	
+Non réalisée
+0 points
+	
+Réalisée
+1 points
+ML (classiques) utitlisés : 1, 2, ...	
+Non réalisée
+0 points
+	
+Un seul modèle
+1 points
+	
+2 modèles
+2 points
+	
+Plusieurs
+4 points
+ML et ngram	
+Non réalisé
+0 points
+	
+Réaisé
+1 points
+ML-tf-idf	
+Non réalisé
+0 points
+	
+Réalisé
+1 points
+ML-LLM	
+Non réalisé
+0 points
+	
+Réalisé
+1 points
+Arch Depp learning utilisées	
+Non réalisé
+0 points
+	
+1 modèle
+1 points
+	
+2 modèles
+2 points
+	
+Plusieuus
+4 points
+Deep-Ngram	
+Non réalisé
+0 points
+	
+Réalisé
+1 points
+Deep-tf-idf	
+Non réalisé
+0 points
+	
+Réalisé
+1 points
+Deep- LLM	
+Non réalisé
+0 points
+	
+Réalisé
+1 points
+Modèle inférence optimal	
+Non réalisé
+0 points
+	
+marche à moitié
+1 points
+	
+réalisé
+2 points
+Modèle inférence sur les données de test	
+Non réalisé
+0 points
+	
+réalisé mais ne fonctionne pas
+1 points
+	
+marche à moitie
+2 points
+	
+réalisé
+3 points

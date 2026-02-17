@@ -1,9 +1,2 @@
 data
 .venv
-models/bert_cnn/saved_model
-models/bert_finetune/saved_model
-models/bm25_mlp/saved_model
-models/bow_lr/saved_model
-models/llm_polarity/saved_model
-models/llm_scorer/saved_model
-models/tfidf_svm/saved_model

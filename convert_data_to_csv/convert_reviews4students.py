@@ -2,8 +2,8 @@ import json
 import csv
 import os
 
-input_file = r'c:\Travail\S6C01\data\yelp_academic_reviews4students.jsonl'
-output_file = r'c:\Travail\S6C01\data\yelp_academic_reviews4students.csv'
+input_file = r'..\data\yelp_academic_reviews4students.jsonl'
+output_file = r'..\data\yelp_academic_reviews4students.csv'
 
 def convert():
     if not os.path.exists(input_file):

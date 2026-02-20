@@ -1,81 +1,130 @@
+﻿from __future__ import annotations
+
+import argparse
+import math
 import pickle
 from pathlib import Path
 
-import torch
-from sklearn.feature_extraction.text import CountVectorizer
+import pandas as pd
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, classification_report
-
-from scripts.data_pipeline import load_joined_dataframe, split_train_test
 
 
-def artifacts_dir() -> Path:
-    return Path(__file__).resolve().parent / "artifacts"
-
-
-def log(message: str) -> None:
-    print(f"[train] {message}", flush=True)
-
-
-def main():
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    log(f"Torch device detected: {device}")
-
-    output_dir = artifacts_dir()
-    output_dir.mkdir(parents=True, exist_ok=True)
-    log(f"Artifacts directory: {output_dir}")
-
-    log("Loading and joining CSV files (reviews + business + users)...")
-    df = load_joined_dataframe()
-    log(f"Joined dataset size: {len(df)} rows")
-
-    log("Creating train/test split (90/10, stratified)...")
-    train_df, test_df = split_train_test(df)
-    log(f"Train rows: {len(train_df)} | Test rows: {len(test_df)}")
-
-    log("Fitting CountVectorizer...")
-    vectorizer = CountVectorizer(
-        max_features=100_000,
-        ngram_range=(1, 2),
-        min_df=2,
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Train a LogisticRegression model to predict score_label using a shared CountVectorizer."
     )
-    x_train = vectorizer.fit_transform(train_df["combined_text"])
-    y_train = train_df["label"]
-    log(f"CountVectorizer vocabulary size: {len(vectorizer.vocabulary_)}")
+    parser.add_argument(
+        "--input",
+        type=Path,
+        default=Path("data/prepared/training_dataset.csv"),
+        help="Path to the prepared training dataset.",
+    )
+    parser.add_argument(
+        "--vectorizer_path",
+        type=Path,
+        default=Path("text_representations/CountVectorizer/saved_model/count_vectorizer.pkl"),
+        help="Path to the pre-fitted shared CountVectorizer.",
+    )
+    parser.add_argument(
+        "--output_dir",
+        type=Path,
+        default=Path("models/countvectorizer_logreg/score_prediction/saved_model"),
+        help="Directory where the trained model will be saved.",
+    )
+    parser.add_argument(
+        "--progress_every",
+        type=int,
+        default=50000,
+        help="Number of rows between progress updates while building text documents.",
+    )
+    parser.add_argument(
+        "--max_iter",
+        type=int,
+        default=200,
+        help="Maximum number of iterations for LogisticRegression.",
+    )
+    return parser.parse_args()
 
-    log("Training Logistic Regression on CountVectorizer features...")
+
+def build_documents_with_progress(text_block: pd.DataFrame, progress_every: int) -> pd.Series:
+    total_rows = len(text_block)
+    documents: list[str] = []
+
+    print(f"Building text documents: 0/{total_rows} (0.00%)")
+    for idx, row in enumerate(text_block.itertuples(index=False, name=None), start=1):
+        parts = []
+        for value in row:
+            text = str(value).strip()
+            if text:
+                parts.append(text)
+        documents.append(" ".join(parts))
+
+        if idx % progress_every == 0 or idx == total_rows:
+            pct = (idx / total_rows) * 100
+            print(f"Building text documents: {idx}/{total_rows} ({pct:.2f}%)")
+
+    return pd.Series(documents)
+
+
+def main() -> None:
+    args = parse_args()
+
+    if not args.input.exists():
+        raise FileNotFoundError(
+            f"Input file not found: {args.input}. Run scripts/prepare_data/prepare_training_data.py first."
+        )
+
+    if not args.vectorizer_path.exists():
+        raise FileNotFoundError(
+            f"Shared vectorizer not found: {args.vectorizer_path}. Run text_representations/CountVectorizer/train.py first."
+        )
+
+    df = pd.read_csv(args.input)
+
+    required_columns = {"review_text", "user_name", "score_label"}
+    missing = [c for c in required_columns if c not in df.columns]
+    if missing:
+        raise KeyError(f"Missing required columns: {missing}")
+
+    text_block = df.loc[:, "review_text":"user_name"].copy()
+    text_block = text_block.fillna("").astype(str)
+    documents = build_documents_with_progress(text_block, args.progress_every)
+
+    labels = df["score_label"].astype(int)
+
+    split_index = max(1, math.floor(len(documents) * 0.9))
+    train_documents = documents.iloc[:split_index]
+    train_labels = labels.iloc[:split_index]
+
+    print(f"Loading shared CountVectorizer from: {args.vectorizer_path}")
+    with args.vectorizer_path.open("rb") as f:
+        vectorizer = pickle.load(f)
+
+    print(f"Vectorizing training data (rows: {len(train_documents)})...")
+    x_train = vectorizer.transform(train_documents)
+    print("Vectorization complete.")
+
+    print("Training LogisticRegression (verbose enabled)...")
     model = LogisticRegression(
-        max_iter=2000,
+        solver="saga",
         multi_class="multinomial",
-        solver="lbfgs",
+        max_iter=args.max_iter,
         n_jobs=-1,
-        random_state=42,
+        verbose=1,
+        random_state=67,
     )
-    model.fit(x_train, y_train)
-    log("Model training complete")
+    model.fit(x_train, train_labels)
+    print("Training complete.")
 
-    log("Evaluating on held-out test split...")
-    x_test = vectorizer.transform(test_df["combined_text"])
-    y_test = test_df["label"]
-    y_pred = model.predict(x_test)
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    model_path = args.output_dir / "logreg_score_model.pkl"
 
-    log(f"Validation accuracy (10% split): {accuracy_score(y_test, y_pred):.4f}")
-    print(classification_report(y_test, y_pred, digits=4), flush=True)
-
-    log("Saving vectorizers and model with pickle...")
-    with open(output_dir / "vectorizer.pkl", "wb") as f:
-        pickle.dump(vectorizer, f)
-    with open(output_dir / "model.pkl", "wb") as f:
+    with model_path.open("wb") as f:
         pickle.dump(model, f)
 
-    log("Saving held-out test split for later test.py runs...")
-    test_df[["review_id", "label", "combined_text"]].to_csv(
-        output_dir / "test_split.csv",
-        index=False,
-    )
-
-    log("Done")
-    log(f"Saved artifacts in: {output_dir}")
+    print(f"Saved model to: {model_path}")
+    print(f"Using shared vectorizer: {args.vectorizer_path}")
+    print(f"Total rows: {len(documents)} | Training rows (90%): {len(train_documents)}")
 
 
 if __name__ == "__main__":

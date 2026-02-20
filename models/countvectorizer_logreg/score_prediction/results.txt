@@ -1,0 +1,20 @@
+CountVectorizer + LogisticRegression (score_label prediction)
+Shared vectorizer: text_representations\CountVectorizer\saved_model\count_vectorizer.pkl
+Total rows: 1000000
+Train rows (first 90%): 900000
+Test rows (last 10%): 100000
+Accuracy: 0.6944
+
+Classification report:
+              precision    recall  f1-score   support
+
+           1     0.7582    0.8492    0.8011     15447
+           2     0.4545    0.3057    0.3656      7709
+           3     0.4836    0.3723    0.4207      9796
+           4     0.5427    0.4163    0.4712     20842
+           5     0.7714    0.9013    0.8313     46206
+
+    accuracy                         0.6944    100000
+   macro avg     0.6021    0.5690    0.5780    100000
+weighted avg     0.6691    0.6944    0.6755    100000
+

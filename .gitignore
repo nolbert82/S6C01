@@ -1,6 +1,7 @@
 data
 .venv
+.vscode/settings.json
+
 text_representations/CountVectorizer/saved_model/
 text_representations/BERT/saved_model/
 text_representations/TFIDF/saved_model/
-

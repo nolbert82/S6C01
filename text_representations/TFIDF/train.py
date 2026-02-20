@@ -57,17 +57,7 @@ def build_documents_with_progress(text_block: pd.DataFrame, progress_every: int)
 def main() -> None:
     args = parse_args()
 
-    if not args.input.exists():
-        raise FileNotFoundError(
-            f"Input file not found: {args.input}. Run scripts/prepare_training_data.py first."
-        )
-
     df = pd.read_csv(args.input)
-
-    if "review_text" not in df.columns or "user_name" not in df.columns:
-        raise KeyError(
-            "Input dataset must contain both 'review_text' and 'user_name' columns."
-        )
 
     text_block = df.loc[:, "review_text":"user_name"].copy()
     text_block = text_block.fillna("").astype(str)

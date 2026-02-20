@@ -11,7 +11,7 @@ from sklearn.metrics import accuracy_score, classification_report
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Test shared CountVectorizer + LogisticRegression model on last 10% of dataset."
+        description="Test shared CountVectorizer + LogisticRegression polarity model on last 10% of dataset."
     )
     parser.add_argument(
         "--input",
@@ -28,13 +28,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--model_dir",
         type=Path,
-        default=Path("models/countvectorizer_logreg/score_prediction/saved_model"),
+        default=Path("models/countvectorizer_logreg/polarity_prediction/saved_model"),
         help="Directory containing the trained LogisticRegression model.",
     )
     parser.add_argument(
         "--results_path",
         type=Path,
-        default=Path("models/countvectorizer_logreg/score_prediction/results.txt"),
+        default=Path("models/countvectorizer_logreg/polarity_prediction/results.txt"),
         help="Path where test results will be written.",
     )
     parser.add_argument(
@@ -77,13 +77,13 @@ def main() -> None:
             f"Shared vectorizer not found: {args.vectorizer_path}. Run text_representations/CountVectorizer/train.py first."
         )
 
-    model_path = args.model_dir / "logreg_score_model.pkl"
+    model_path = args.model_dir / "logreg_polarity_model.pkl"
     if not model_path.exists():
         raise FileNotFoundError(f"Model not found: {model_path}. Run train.py first.")
 
     df = pd.read_csv(args.input)
 
-    required_columns = {"review_text", "user_name", "score_label"}
+    required_columns = {"review_text", "user_name", "polarity_label"}
     missing = [c for c in required_columns if c not in df.columns]
     if missing:
         raise KeyError(f"Missing required columns: {missing}")
@@ -91,7 +91,7 @@ def main() -> None:
     text_block = df.loc[:, "review_text":"user_name"].copy()
     text_block = text_block.fillna("").astype(str)
     documents = build_documents_with_progress(text_block, args.progress_every)
-    labels = df["score_label"].astype(int)
+    labels = df["polarity_label"].astype(int)
 
     split_index = max(1, math.floor(len(documents) * 0.9))
     test_documents = documents.iloc[split_index:]
@@ -118,7 +118,7 @@ def main() -> None:
     report = classification_report(test_labels, y_pred, digits=4)
 
     result_text = (
-        "CountVectorizer + LogisticRegression (score_label prediction)\n"
+        "CountVectorizer + LogisticRegression (polarity_label prediction)\n"
         f"Shared vectorizer: {args.vectorizer_path}\n"
         f"Total rows: {len(documents)}\n"
         f"Train rows (first 90%): {split_index}\n"

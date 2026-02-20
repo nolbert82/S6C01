@@ -6,12 +6,12 @@ import pickle
 from pathlib import Path
 
 import pandas as pd
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.linear_model import LogisticRegression
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Test shared CountVectorizer + LogisticRegression model on last 10% of dataset."
+        description="Train a LogisticRegression model to predict polarity_label using a shared CountVectorizer."
     )
     parser.add_argument(
         "--input",
@@ -26,22 +26,22 @@ def parse_args() -> argparse.Namespace:
         help="Path to the pre-fitted shared CountVectorizer.",
     )
     parser.add_argument(
-        "--model_dir",
+        "--output_dir",
         type=Path,
-        default=Path("models/countvectorizer_logreg/score_prediction/saved_model"),
-        help="Directory containing the trained LogisticRegression model.",
-    )
-    parser.add_argument(
-        "--results_path",
-        type=Path,
-        default=Path("models/countvectorizer_logreg/score_prediction/results.txt"),
-        help="Path where test results will be written.",
+        default=Path("models/countvectorizer_logreg/polarity_prediction/saved_model"),
+        help="Directory where the trained model will be saved.",
     )
     parser.add_argument(
         "--progress_every",
         type=int,
         default=50000,
         help="Number of rows between progress updates while building text documents.",
+    )
+    parser.add_argument(
+        "--max_iter",
+        type=int,
+        default=200,
+        help="Maximum number of iterations for LogisticRegression.",
     )
     return parser.parse_args()
 
@@ -70,20 +70,18 @@ def main() -> None:
     args = parse_args()
 
     if not args.input.exists():
-        raise FileNotFoundError(f"Input file not found: {args.input}")
+        raise FileNotFoundError(
+            f"Input file not found: {args.input}. Run scripts/prepare_data/prepare_training_data.py first."
+        )
 
     if not args.vectorizer_path.exists():
         raise FileNotFoundError(
             f"Shared vectorizer not found: {args.vectorizer_path}. Run text_representations/CountVectorizer/train.py first."
         )
 
-    model_path = args.model_dir / "logreg_score_model.pkl"
-    if not model_path.exists():
-        raise FileNotFoundError(f"Model not found: {model_path}. Run train.py first.")
-
     df = pd.read_csv(args.input)
 
-    required_columns = {"review_text", "user_name", "score_label"}
+    required_columns = {"review_text", "user_name", "polarity_label"}
     missing = [c for c in required_columns if c not in df.columns]
     if missing:
         raise KeyError(f"Missing required columns: {missing}")
@@ -91,47 +89,42 @@ def main() -> None:
     text_block = df.loc[:, "review_text":"user_name"].copy()
     text_block = text_block.fillna("").astype(str)
     documents = build_documents_with_progress(text_block, args.progress_every)
-    labels = df["score_label"].astype(int)
+
+    labels = df["polarity_label"].astype(int)
 
     split_index = max(1, math.floor(len(documents) * 0.9))
-    test_documents = documents.iloc[split_index:]
-    test_labels = labels.iloc[split_index:]
+    train_documents = documents.iloc[:split_index]
+    train_labels = labels.iloc[:split_index]
 
-    if test_documents.empty:
-        raise ValueError("No test rows found in the last 10% split.")
-
-    print(f"Loading shared vectorizer from: {args.vectorizer_path}")
+    print(f"Loading shared CountVectorizer from: {args.vectorizer_path}")
     with args.vectorizer_path.open("rb") as f:
         vectorizer = pickle.load(f)
 
-    print(f"Loading model from: {model_path}")
-    with model_path.open("rb") as f:
-        model = pickle.load(f)
+    print(f"Vectorizing training data (rows: {len(train_documents)})...")
+    x_train = vectorizer.transform(train_documents)
+    print("Vectorization complete.")
 
-    print(f"Vectorizing test data (rows: {len(test_documents)})...")
-    x_test = vectorizer.transform(test_documents)
-
-    print("Running predictions...")
-    y_pred = model.predict(x_test)
-
-    accuracy = accuracy_score(test_labels, y_pred)
-    report = classification_report(test_labels, y_pred, digits=4)
-
-    result_text = (
-        "CountVectorizer + LogisticRegression (score_label prediction)\n"
-        f"Shared vectorizer: {args.vectorizer_path}\n"
-        f"Total rows: {len(documents)}\n"
-        f"Train rows (first 90%): {split_index}\n"
-        f"Test rows (last 10%): {len(test_documents)}\n"
-        f"Accuracy: {accuracy:.4f}\n\n"
-        "Classification report:\n"
-        f"{report}\n"
+    print("Training LogisticRegression (verbose enabled)...")
+    model = LogisticRegression(
+        solver="saga",
+        multi_class="multinomial",
+        max_iter=args.max_iter,
+        n_jobs=-1,
+        verbose=1,
+        random_state=67,
     )
+    model.fit(x_train, train_labels)
+    print("Training complete.")
 
-    args.results_path.parent.mkdir(parents=True, exist_ok=True)
-    args.results_path.write_text(result_text, encoding="utf-8")
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    model_path = args.output_dir / "logreg_polarity_model.pkl"
 
-    print(f"Test complete. Results written to: {args.results_path}")
+    with model_path.open("wb") as f:
+        pickle.dump(model, f)
+
+    print(f"Saved model to: {model_path}")
+    print(f"Using shared vectorizer: {args.vectorizer_path}")
+    print(f"Total rows: {len(documents)} | Training rows (90%): {len(train_documents)}")
 
 
 if __name__ == "__main__":

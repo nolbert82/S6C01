@@ -5,3 +5,9 @@ data
 text_representations/CountVectorizer/saved_model/
 text_representations/BERT/saved_model/
 text_representations/TFIDF/saved_model/
+
+models\countvectorizer_logreg\polarity_prediction\saved_model
+models\countvectorizer_logreg\score_prediction\saved_model
+
+models\countvectorizer_randomforest\polarity_prediction\saved_model
+models\countvectorizer_randomforest\score_prediction\saved_model

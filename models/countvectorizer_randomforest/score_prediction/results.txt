@@ -1,0 +1,20 @@
+CountVectorizer + RandomForest (score_label prediction)
+Shared vectorizer: text_representations\CountVectorizer\saved_model\count_vectorizer.pkl
+Total rows: 1000000
+Train rows (first 90%): 900000
+Test rows (last 10%): 100000
+Accuracy: 0.5009
+
+Classification report:
+              precision    recall  f1-score   support
+
+           1     0.7434    0.2543    0.3789     15447
+           2     1.0000    0.0001    0.0003      7709
+           3     1.0000    0.0001    0.0002      9796
+           4     0.3445    0.0049    0.0097     20842
+           5     0.4878    0.9968    0.6550     46206
+
+    accuracy                         0.5009    100000
+   macro avg     0.7151    0.2512    0.2088    100000
+weighted avg     0.5871    0.5009    0.3633    100000
+

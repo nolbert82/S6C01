@@ -1,0 +1,18 @@
+CountVectorizer + PyTorch MLP (score_label prediction)
+Shared vectorizer: text_representations\CountVectorizer\saved_model\count_vectorizer.pkl
+Test rows: 100000
+Accuracy: 0.7015
+
+Classification report:
+              precision    recall  f1-score   support
+
+           1     0.7504    0.8749    0.8079     15447
+           2     0.4435    0.3456    0.3885      7709
+           3     0.5103    0.3349    0.4044      9796
+           4     0.5429    0.4699    0.5038     20842
+           5     0.7938    0.8850    0.8369     46206
+
+    accuracy                         0.7015    100000
+   macro avg     0.6082    0.5821    0.5883    100000
+weighted avg     0.6800    0.7015    0.6861    100000
+

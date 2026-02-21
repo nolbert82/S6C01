@@ -1,0 +1,18 @@
+TFIDF + SVM (score_label prediction)
+Shared vectorizer: text_representations\TFIDF\saved_model\tfidf_vectorizer.pkl
+Test rows: 100000
+Accuracy: 0.6627
+
+Classification report:
+              precision    recall  f1-score   support
+
+           1     0.7334    0.8233    0.7758     15447
+           2     0.3873    0.2401    0.2964      7709
+           3     0.4236    0.3037    0.3538      9796
+           4     0.4790    0.3975    0.4345     20842
+           5     0.7550    0.8752    0.8107     46206
+
+    accuracy                         0.6627    100000
+   macro avg     0.5557    0.5280    0.5342    100000
+weighted avg     0.6333    0.6627    0.6425    100000
+

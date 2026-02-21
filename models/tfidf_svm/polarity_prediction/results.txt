@@ -1,0 +1,16 @@
+TFIDF + SVM (polarity_label prediction)
+Shared vectorizer: text_representations\TFIDF\saved_model\tfidf_vectorizer.pkl
+Test rows: 100000
+Accuracy: 0.8689
+
+Classification report:
+              precision    recall  f1-score   support
+
+          -1     0.8289    0.8633    0.8457     23156
+           0     0.5118    0.2507    0.3366      9796
+           1     0.9065    0.9611    0.9330     67048
+
+    accuracy                         0.8689    100000
+   macro avg     0.7491    0.6917    0.7051    100000
+weighted avg     0.8499    0.8689    0.8544    100000
+

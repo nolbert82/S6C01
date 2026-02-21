@@ -1,0 +1,18 @@
+TFIDF + RandomForest (score_label prediction)
+Shared vectorizer: text_representations\TFIDF\saved_model\tfidf_vectorizer.pkl
+Test rows: 100000
+Accuracy: 0.4989
+
+Classification report:
+              precision    recall  f1-score   support
+
+           1     0.7438    0.2424    0.3657     15447
+           2     0.0000    0.0000    0.0000      7709
+           3     0.0000    0.0000    0.0000      9796
+           4     0.3538    0.0033    0.0066     20842
+           5     0.4862    0.9971    0.6536     46206
+
+    accuracy                         0.4989    100000
+   macro avg     0.3168    0.2486    0.2052    100000
+weighted avg     0.4133    0.4989    0.3599    100000
+

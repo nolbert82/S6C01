@@ -1,16 +1,16 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import argparse
 import pickle
 from pathlib import Path
 
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import LinearSVC
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Train a RandomForest model to predict polarity_label using a shared CountVectorizer."
+        description="Train an SVM model to predict polarity_label using a shared CountVectorizer."
     )
     parser.add_argument(
         "--input",
@@ -27,7 +27,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output_dir",
         type=Path,
-        default=Path("models/countvectorizer_randomforest/polarity_prediction/saved_model"),
+        default=Path("models/countvectorizer_svm/polarity_prediction/saved_model"),
         help="Directory where the trained model will be saved.",
     )
     parser.add_argument(
@@ -37,28 +37,28 @@ def parse_args() -> argparse.Namespace:
         help="Number of rows between progress updates while building text documents.",
     )
     parser.add_argument(
-        "--n_estimators",
+        "--max_iter",
         type=int,
-        default=100,
-        help="Number of trees in the random forest.",
+        default=2000,
+        help="Maximum number of iterations for LinearSVC.",
     )
     parser.add_argument(
-        "--max_depth",
-        type=int,
-        default=30,
-        help="Maximum depth of each tree in the random forest.",
+        "--tol",
+        type=float,
+        default=1e-3,
+        help="Stopping tolerance for LinearSVC. Higher values usually train faster.",
     )
     parser.add_argument(
-        "--min_samples_leaf",
+        "--max_rows",
         type=int,
-        default=2,
-        help="Minimum number of samples required to be at a leaf node.",
+        default=100000,
+        help="Train only on the first N rows of the dataset. Use 0 or negative to use all rows.",
     )
     parser.add_argument(
         "--verbose",
         type=int,
-        default=2,
-        help="Verbosity level for RandomForest training progress.",
+        default=1,
+        help="Verbosity level for LinearSVC training progress.",
     )
     return parser.parse_args()
 
@@ -97,6 +97,13 @@ def main() -> None:
         )
 
     df = pd.read_csv(args.input)
+    if args.max_rows > 0:
+        original_rows = len(df)
+        df = df.head(args.max_rows).copy()
+        print(
+            f"Using first {len(df)} rows out of {original_rows} total rows "
+            f"(max_rows={args.max_rows})."
+        )
 
     required_columns = {"review_text", "user_name", "polarity_label"}
     missing = [c for c in required_columns if c not in df.columns]
@@ -119,12 +126,12 @@ def main() -> None:
     x_train = vectorizer.transform(train_documents)
     print("Vectorization complete.")
 
-    print(f"Training RandomForestClassifier (verbose={args.verbose})...")
-    model = RandomForestClassifier(
-        n_estimators=args.n_estimators,
-        max_depth=args.max_depth,
-        min_samples_leaf=args.min_samples_leaf,
-        n_jobs=-1,
+    print(f"Training LinearSVC (verbose={args.verbose})...")
+    model = LinearSVC(
+        C=1.0,
+        dual=False,
+        tol=args.tol,
+        max_iter=args.max_iter,
         verbose=args.verbose,
         random_state=67,
     )
@@ -132,7 +139,7 @@ def main() -> None:
     print("Training complete.")
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    model_path = args.output_dir / "rf_polarity_model.pkl"
+    model_path = args.output_dir / "svm_polarity_model.pkl"
 
     with model_path.open("wb") as f:
         pickle.dump(model, f)

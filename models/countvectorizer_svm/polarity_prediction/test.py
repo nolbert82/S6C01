@@ -1,22 +1,22 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import argparse
 import pickle
 from pathlib import Path
 
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Train a RandomForest model to predict polarity_label using a shared CountVectorizer."
+        description="Test shared CountVectorizer + SVM polarity model on the testing dataset."
     )
     parser.add_argument(
         "--input",
         type=Path,
-        default=Path("data/prepared/training_dataset.csv"),
-        help="Path to the prepared training dataset.",
+        default=Path("data/prepared/testing_dataset.csv"),
+        help="Path to the prepared testing dataset.",
     )
     parser.add_argument(
         "--vectorizer_path",
@@ -25,40 +25,22 @@ def parse_args() -> argparse.Namespace:
         help="Path to the pre-fitted shared CountVectorizer.",
     )
     parser.add_argument(
-        "--output_dir",
+        "--model_dir",
         type=Path,
-        default=Path("models/countvectorizer_randomforest/polarity_prediction/saved_model"),
-        help="Directory where the trained model will be saved.",
+        default=Path("models/countvectorizer_svm/polarity_prediction/saved_model"),
+        help="Directory containing the trained SVM model.",
+    )
+    parser.add_argument(
+        "--results_path",
+        type=Path,
+        default=Path("models/countvectorizer_svm/polarity_prediction/results.txt"),
+        help="Path where test results will be written.",
     )
     parser.add_argument(
         "--progress_every",
         type=int,
         default=50000,
         help="Number of rows between progress updates while building text documents.",
-    )
-    parser.add_argument(
-        "--n_estimators",
-        type=int,
-        default=100,
-        help="Number of trees in the random forest.",
-    )
-    parser.add_argument(
-        "--max_depth",
-        type=int,
-        default=30,
-        help="Maximum depth of each tree in the random forest.",
-    )
-    parser.add_argument(
-        "--min_samples_leaf",
-        type=int,
-        default=2,
-        help="Minimum number of samples required to be at a leaf node.",
-    )
-    parser.add_argument(
-        "--verbose",
-        type=int,
-        default=2,
-        help="Verbosity level for RandomForest training progress.",
     )
     return parser.parse_args()
 
@@ -87,14 +69,16 @@ def main() -> None:
     args = parse_args()
 
     if not args.input.exists():
-        raise FileNotFoundError(
-            f"Input file not found: {args.input}. Run scripts/prepare_data/prepare_training_data.py first."
-        )
+        raise FileNotFoundError(f"Input file not found: {args.input}")
 
     if not args.vectorizer_path.exists():
         raise FileNotFoundError(
             f"Shared vectorizer not found: {args.vectorizer_path}. Run text_representations/CountVectorizer/train.py first."
         )
+
+    model_path = args.model_dir / "svm_polarity_model.pkl"
+    if not model_path.exists():
+        raise FileNotFoundError(f"Model not found: {model_path}. Run train.py first.")
 
     df = pd.read_csv(args.input)
 
@@ -106,40 +90,44 @@ def main() -> None:
     text_block = df.loc[:, "review_text":"user_name"].copy()
     text_block = text_block.fillna("").astype(str)
     documents = build_documents_with_progress(text_block, args.progress_every)
-
     labels = df["polarity_label"].astype(int)
-    train_documents = documents
-    train_labels = labels
 
-    print(f"Loading shared CountVectorizer from: {args.vectorizer_path}")
+    test_documents = documents
+    test_labels = labels
+
+    if test_documents.empty:
+        raise ValueError("No test rows found in testing dataset.")
+
+    print(f"Loading shared vectorizer from: {args.vectorizer_path}")
     with args.vectorizer_path.open("rb") as f:
         vectorizer = pickle.load(f)
 
-    print(f"Vectorizing training data (rows: {len(train_documents)})...")
-    x_train = vectorizer.transform(train_documents)
-    print("Vectorization complete.")
+    print(f"Loading model from: {model_path}")
+    with model_path.open("rb") as f:
+        model = pickle.load(f)
 
-    print(f"Training RandomForestClassifier (verbose={args.verbose})...")
-    model = RandomForestClassifier(
-        n_estimators=args.n_estimators,
-        max_depth=args.max_depth,
-        min_samples_leaf=args.min_samples_leaf,
-        n_jobs=-1,
-        verbose=args.verbose,
-        random_state=67,
+    print(f"Vectorizing test data (rows: {len(test_documents)})...")
+    x_test = vectorizer.transform(test_documents)
+
+    print("Running predictions...")
+    y_pred = model.predict(x_test)
+
+    accuracy = accuracy_score(test_labels, y_pred)
+    report = classification_report(test_labels, y_pred, digits=4)
+
+    result_text = (
+        "CountVectorizer + SVM (polarity_label prediction)\n"
+        f"Shared vectorizer: {args.vectorizer_path}\n"
+        f"Test rows: {len(test_documents)}\n"
+        f"Accuracy: {accuracy:.4f}\n\n"
+        "Classification report:\n"
+        f"{report}\n"
     )
-    model.fit(x_train, train_labels)
-    print("Training complete.")
 
-    args.output_dir.mkdir(parents=True, exist_ok=True)
-    model_path = args.output_dir / "rf_polarity_model.pkl"
+    args.results_path.parent.mkdir(parents=True, exist_ok=True)
+    args.results_path.write_text(result_text, encoding="utf-8")
 
-    with model_path.open("wb") as f:
-        pickle.dump(model, f)
-
-    print(f"Saved model to: {model_path}")
-    print(f"Using shared vectorizer: {args.vectorizer_path}")
-    print(f"Training rows: {len(train_documents)}")
+    print(f"Test complete. Results written to: {args.results_path}")
 
 
 if __name__ == "__main__":

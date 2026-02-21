@@ -1,0 +1,16 @@
+TFIDF + PyTorch MLP (polarity_label prediction)
+Shared vectorizer: text_representations\TFIDF\saved_model\tfidf_vectorizer.pkl
+Test rows: 100000
+Accuracy: 0.8820
+
+Classification report:
+              precision    recall  f1-score   support
+
+          -1     0.8414    0.8935    0.8666     23156
+           0     0.5399    0.3029    0.3881      9796
+           1     0.9232    0.9627    0.9425     67048
+
+    accuracy                         0.8820    100000
+   macro avg     0.7682    0.7197    0.7324    100000
+weighted avg     0.8667    0.8820    0.8707    100000
+

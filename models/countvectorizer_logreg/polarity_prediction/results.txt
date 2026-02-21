@@ -1,8 +1,6 @@
 CountVectorizer + LogisticRegression (polarity_label prediction)
 Shared vectorizer: text_representations\CountVectorizer\saved_model\count_vectorizer.pkl
-Total rows: 1000000
-Train rows (first 90%): 900000
-Test rows (last 10%): 100000
+Test rows: 100000
 Accuracy: 0.8761
 
 Classification report:

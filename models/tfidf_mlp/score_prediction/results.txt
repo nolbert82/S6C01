@@ -1,0 +1,18 @@
+TFIDF + PyTorch MLP (score_label prediction)
+Shared vectorizer: text_representations\TFIDF\saved_model\tfidf_vectorizer.pkl
+Test rows: 100000
+Accuracy: 0.7036
+
+Classification report:
+              precision    recall  f1-score   support
+
+           1     0.7667    0.8583    0.8099     15447
+           2     0.4502    0.3973    0.4221      7709
+           3     0.5133    0.3485    0.4152      9796
+           4     0.5382    0.5109    0.5242     20842
+           5     0.8082    0.8653    0.8357     46206
+
+    accuracy                         0.7036    100000
+   macro avg     0.6153    0.5961    0.6014    100000
+weighted avg     0.6890    0.7036    0.6937    100000
+

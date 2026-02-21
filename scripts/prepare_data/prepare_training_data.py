@@ -50,7 +50,7 @@ POLARITY_LABEL_COLUMN = "polarity_label"
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Prepare one training CSV by left-joining Yelp reviews with business and user data."
+        description="Prepare training/testing CSVs by left-joining Yelp reviews with business and user data."
     )
     parser.add_argument(
         "--reviews",
@@ -74,7 +74,7 @@ def parse_args() -> argparse.Namespace:
         "--output",
         type=Path,
         default=Path("data/prepared/training_dataset.csv"),
-        help="Output CSV path.",
+        help="Training output CSV path. Testing output is written beside it as testing_dataset.csv.",
     )
     return parser.parse_args()
 
@@ -184,11 +184,22 @@ def main() -> None:
     ordered_columns = TEXT_COLUMNS + NUMERIC_COLUMNS + [SCORE_LABEL_COLUMN, POLARITY_LABEL_COLUMN]
     prepared = merged[ordered_columns]
 
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    prepared.to_csv(args.output, index=False, quoting=csv.QUOTE_MINIMAL)
+    split_idx = int(len(prepared) * 0.9)
+    training = prepared.iloc[:split_idx]
+    testing = prepared.iloc[split_idx:]
 
-    print(f"Prepared dataset saved to: {args.output}")
-    print(f"Rows: {len(prepared)} | Columns: {len(prepared.columns)}")
+    training_path = args.output
+    testing_path = args.output.with_name("testing_dataset.csv")
+    training_path.parent.mkdir(parents=True, exist_ok=True)
+
+    training.to_csv(training_path, index=False, quoting=csv.QUOTE_MINIMAL)
+    testing.to_csv(testing_path, index=False, quoting=csv.QUOTE_MINIMAL)
+
+    print(f"Training dataset saved to: {training_path}")
+    print(f"Testing dataset saved to: {testing_path}")
+    print(
+        f"Training rows: {len(training)} | Testing rows: {len(testing)} | Columns: {len(prepared.columns)}"
+    )
 
 
 if __name__ == "__main__":

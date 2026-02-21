@@ -1,6 +1,11 @@
-data
 .venv
 .vscode
 
+# data
+**/*.csv
+**/*.json
+**/*.jsonl
+
+# models
 **/saved_model/
 **/*.pkl

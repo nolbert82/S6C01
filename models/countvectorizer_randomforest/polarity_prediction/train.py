@@ -1,7 +1,6 @@
 ﻿from __future__ import annotations
 
 import argparse
-import math
 import pickle
 from pathlib import Path
 
@@ -103,10 +102,8 @@ def main() -> None:
     documents = build_documents_with_progress(text_block, args.progress_every)
 
     labels = df["polarity_label"].astype(int)
-
-    split_index = max(1, math.floor(len(documents) * 0.9))
-    train_documents = documents.iloc[:split_index]
-    train_labels = labels.iloc[:split_index]
+    train_documents = documents
+    train_labels = labels
 
     print(f"Loading shared CountVectorizer from: {args.vectorizer_path}")
     with args.vectorizer_path.open("rb") as f:
@@ -136,7 +133,7 @@ def main() -> None:
 
     print(f"Saved model to: {model_path}")
     print(f"Using shared vectorizer: {args.vectorizer_path}")
-    print(f"Total rows: {len(documents)} | Training rows (90%): {len(train_documents)}")
+    print(f"Training rows: {len(train_documents)}")
 
 
 if __name__ == "__main__":

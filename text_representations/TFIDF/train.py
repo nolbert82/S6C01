@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import math
 import pickle
 from pathlib import Path
 
@@ -11,7 +10,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Train and save a TF-IDF vectorizer on the first 90% of the training dataset."
+        description="Train and save a TF-IDF vectorizer on the training dataset."
     )
     parser.add_argument(
         "--input",
@@ -63,12 +62,9 @@ def main() -> None:
     text_block = text_block.fillna("").astype(str)
     documents = build_documents_with_progress(text_block, args.progress_every)
 
-    split_index = max(1, math.floor(len(documents) * 0.9))
-    train_documents = documents.iloc[:split_index]
-
-    print("Fitting TF-IDF vectorizer on first 90% of rows...")
+    print("Fitting TF-IDF vectorizer on all training rows...")
     vectorizer = TfidfVectorizer()
-    vectorizer.fit(train_documents)
+    vectorizer.fit(documents)
     print("TF-IDF fit complete.")
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -77,7 +73,7 @@ def main() -> None:
         pickle.dump(vectorizer, f)
 
     print(f"Saved vectorizer to: {model_path}")
-    print(f"Total rows: {len(documents)} | Training rows (90%): {len(train_documents)}")
+    print(f"Training rows: {len(documents)}")
     print(f"Vocabulary size: {len(vectorizer.vocabulary_)}")
 
 

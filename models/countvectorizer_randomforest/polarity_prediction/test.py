@@ -1,7 +1,6 @@
 ﻿from __future__ import annotations
 
 import argparse
-import math
 import pickle
 from pathlib import Path
 
@@ -11,13 +10,13 @@ from sklearn.metrics import accuracy_score, classification_report
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Test shared CountVectorizer + RandomForest polarity model on last 10% of dataset."
+        description="Test shared CountVectorizer + RandomForest polarity model on the testing dataset."
     )
     parser.add_argument(
         "--input",
         type=Path,
-        default=Path("data/prepared/training_dataset.csv"),
-        help="Path to the prepared training dataset.",
+        default=Path("data/prepared/testing_dataset.csv"),
+        help="Path to the prepared testing dataset.",
     )
     parser.add_argument(
         "--vectorizer_path",
@@ -93,12 +92,11 @@ def main() -> None:
     documents = build_documents_with_progress(text_block, args.progress_every)
     labels = df["polarity_label"].astype(int)
 
-    split_index = max(1, math.floor(len(documents) * 0.9))
-    test_documents = documents.iloc[split_index:]
-    test_labels = labels.iloc[split_index:]
+    test_documents = documents
+    test_labels = labels
 
     if test_documents.empty:
-        raise ValueError("No test rows found in the last 10% split.")
+        raise ValueError("No test rows found in testing dataset.")
 
     print(f"Loading shared vectorizer from: {args.vectorizer_path}")
     with args.vectorizer_path.open("rb") as f:
@@ -120,9 +118,7 @@ def main() -> None:
     result_text = (
         "CountVectorizer + RandomForest (polarity_label prediction)\n"
         f"Shared vectorizer: {args.vectorizer_path}\n"
-        f"Total rows: {len(documents)}\n"
-        f"Train rows (first 90%): {split_index}\n"
-        f"Test rows (last 10%): {len(test_documents)}\n"
+        f"Test rows: {len(test_documents)}\n"
         f"Accuracy: {accuracy:.4f}\n\n"
         "Classification report:\n"
         f"{report}\n"

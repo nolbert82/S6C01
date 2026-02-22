@@ -1,0 +1,17 @@
+Frozen DistilBERT + CNN (polarity_label prediction)
+BERT model: distilbert-base-uncased
+Test rows: 10000
+Data fraction: 0.1
+Accuracy: 0.8900
+
+Classification report:
+              precision    recall  f1-score   support
+
+          -1     0.8304    0.9235    0.8745      2354
+           0     0.6039    0.2273    0.3303       959
+           1     0.9269    0.9732    0.9495      6687
+
+    accuracy                         0.8900     10000
+   macro avg     0.7871    0.7080    0.7181     10000
+weighted avg     0.8732    0.8900    0.8725     10000
+

@@ -1,0 +1,17 @@
+Frozen DistilBERT + GRU (polarity_label prediction)
+BERT model: distilbert-base-uncased
+Test rows: 10000
+Data fraction: 0.1
+Accuracy: 0.8907
+
+Classification report:
+              precision    recall  f1-score   support
+
+          -1     0.8219    0.9312    0.8731      2354
+           0     0.6164    0.2513    0.3570       959
+           1     0.9326    0.9681    0.9500      6687
+
+    accuracy                         0.8907     10000
+   macro avg     0.7903    0.7169    0.7267     10000
+weighted avg     0.8762    0.8907    0.8751     10000
+

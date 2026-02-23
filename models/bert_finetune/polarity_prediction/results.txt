@@ -1,0 +1,17 @@
+Fine-tuned DistilBERT (polarity_label prediction)
+BERT model: distilbert-base-uncased
+Test rows: 10000
+Data fraction: 0.1
+Accuracy: 0.8756
+
+Classification report:
+              precision    recall  f1-score   support
+
+          -1     0.8341    0.8845    0.8586      2354
+           0     0.4675    0.3379    0.3923       959
+           1     0.9323    0.9496    0.9409      6687
+
+    accuracy                         0.8756     10000
+   macro avg     0.7447    0.7240    0.7306     10000
+weighted avg     0.8646    0.8756    0.8689     10000
+

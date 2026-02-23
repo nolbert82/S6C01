@@ -1,0 +1,18 @@
+LLM Few-Shot Polarity Prediction (ministral3 via LM Studio)
+Input: data\prepared\testing_dataset.csv
+Rows requested: 100
+Rows predicted: 100
+Rows with valid label output: 100
+Accuracy (valid outputs only): 0.9200
+
+Classification report (valid outputs only):
+              precision    recall  f1-score   support
+
+          -1     0.8148    1.0000    0.8980        22
+           0     0.0000    0.0000    0.0000         8
+           1     0.9589    1.0000    0.9790        70
+
+    accuracy                         0.9200       100
+   macro avg     0.5912    0.6667    0.6257       100
+weighted avg     0.8505    0.9200    0.8829       100
+

@@ -1,0 +1,17 @@
+LLM Few-Shot Score Prediction + Aspect Scoring (ministral3 via LM Studio)
+Input: data\prepared\testing_dataset.csv
+Rows requested: 2
+Rows predicted: 2
+Rows with valid overall score output: 2
+Accuracy (valid outputs only): 0.5000
+
+Classification report (valid outputs only):
+              precision    recall  f1-score   support
+
+           1     0.5000    1.0000    0.6667         1
+           3     0.0000    0.0000    0.0000         1
+
+    accuracy                         0.5000         2
+   macro avg     0.2500    0.5000    0.3333         2
+weighted avg     0.2500    0.5000    0.3333         2
+

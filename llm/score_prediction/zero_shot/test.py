@@ -127,7 +127,6 @@ def extract_json(raw_output: str) -> dict:
     cleaned_candidates: list[str] = []
     for candidate in candidates:
         cleaned_candidates.append(candidate)
-        # Common LLM formatting issue: trailing commas before } or ]
         cleaned = re.sub(r",\s*([}\]])", r"\1", candidate)
         if cleaned != candidate:
             cleaned_candidates.append(cleaned)

@@ -164,7 +164,6 @@ def csr_batch_to_embedding_inputs(
     x_csr_batch,
     device: torch.device,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    # Convert CSR rows into EmbeddingBag format.
     indptr = x_csr_batch.indptr
     indices = x_csr_batch.indices
     data = x_csr_batch.data

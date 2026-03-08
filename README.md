@@ -12,10 +12,10 @@ This project focuses on the intelligent analysis of the Yelp Open Dataset. The g
 
 ## Installation
 
-This project uses `uv` for Python package management. To install dependencies:
+To install dependencies:
 
 ```bash
-uv pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 
 ## Data Setup
@@ -73,8 +73,3 @@ For zero-shot or few-shot predictions using LLMs, look into the `llm/` directory
 ```bash
 python llm/score_prediction/zero_shot/test.py
 ```
-
-## Tasks Covered
-- **Polarity Prediction**: Classifying reviews as Positive, Negative, or Neutral.
-- **Score Prediction**: Predicting the exact star rating (1 to 5).
-- **Aspect Extraction**: Identifying specific features (food, service, price) and their associated sentiment.
